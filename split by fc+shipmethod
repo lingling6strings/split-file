@@ -1,0 +1,93 @@
+##### set working directory
+
+##### input data
+# note: convert the file format from xlsx to csv before inputting
+fedex = read.csv('update visibility.csv',header = T)
+fedex[,ncol(fedex)+1] = paste0(fedex[,1],fedex[,2]) ##add key column by fc+ship_method
+fedex = fedex[order(fedex[,1]),] ##order by fc
+fedex = fedex[order(fedex[,1:2]),] ##order by fc+ship_method
+pivot = as.data.frame(table(fedex[,1])) #count rows by fc
+pivot = as.data.frame(table(fedex[,7])) #count rows by fc+ship_method
+pivot[1,3] = pivot[1,2]
+pivot[1,4:5] = 1
+colnames(pivot)=c('fc','count','V3','V4','V5')
+
+for (i in 2:nrow(pivot))
+{
+  pivot[i,3]=pivot[i-1,3]+pivot[i,2]
+  if (pivot[i,3] > 2000)
+  {
+    pivot[i,3]=pivot[i,2]
+  }
+}
+
+
+##### split file by fc level
+for (i in 2:nrow(pivot))
+{
+  if (pivot[i-1,3]+pivot[i,2]>2000)
+  {
+    pivot[i,4]=pivot[i-1,4]+1
+  }else
+  {
+    pivot[i,4]=pivot[i-1,4]
+  }
+}
+
+pivot[,5]=c(1:nrow(pivot))
+
+
+b=c()
+for (i in 1:max(pivot[,4]))
+{
+  b[i]=pivot$V3[max(pivot[pivot$V4==i,]$V5)]
+}
+
+b=c(0,b)
+
+start_row =0
+end_row =0
+
+for (j in 1:max(pivot[,4]))
+{
+  start_row=sum(b[1:j])+1
+  end_row=sum(b[1:j+1])
+  c=fedex[start_row:end_row,]
+  write.csv(c[,-7],paste0("update visibility",j,".csv"),row.names = FALSE)
+  c=data.frame()
+}
+
+
+
+#####split file by fc+ship_method level
+for (i in 1:nrow(pivot))
+{
+  if (i%%2000 == 0)
+  {
+    pivot[i,4]=i%/%2000
+  }else
+  {
+    pivot[i,4]=i%/%2000 +1
+  }
+}
+b= c()
+for (i in 1:max(pivot[,4]))
+{
+  b[i]= sum(pivot[pivot[,4]==i,2])
+}
+
+
+b=c(0,b)
+
+start_row =0
+end_row =0
+
+for (j in 1:max(pivot[,4]))
+{
+  start_row=sum(b[1:j])+1
+  end_row=sum(b[1:j+1])
+  c=fedex[start_row:end_row,]
+  write.csv(c[,-7],paste0("update visibility",j,".csv"),row.names = FALSE)
+  c=data.frame()
+}
+
